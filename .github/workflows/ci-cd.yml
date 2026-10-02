@@ -1,0 +1,94 @@
+name: CI-CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ---------- CI: test every service (runs in parallel via a matrix) ----------
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [greeting-service, portal-service]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  # ---------- Deploy test: does it actually run on Kubernetes? ----------
+  # Spins up a throw-away Kubernetes cluster (kind) inside the runner,
+  # deploys both services, and calls the API. Free, and no cloud account needed.
+  k8s-smoke-test:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker build -t greeting-service:local services/greeting-service
+          docker build -t portal-service:local services/portal-service
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: workshop
+      - name: Load images into the cluster and deploy
+        run: |
+          kind load docker-image greeting-service:local portal-service:local --name workshop
+          kubectl apply -f k8s/
+          kubectl -n workshop rollout status deployment/greeting-service --timeout=120s
+          kubectl -n workshop rollout status deployment/portal-service --timeout=120s
+      - name: Call the API through the cluster
+        run: |
+          kubectl -n workshop port-forward svc/portal-service 8080:80 &
+          sleep 5
+          curl -fsS http://localhost:8080/welcome/CI
+      - name: Show pods and logs
+        if: always()
+        run: |
+          kubectl -n workshop get pods
+          kubectl -n workshop logs deployment/portal-service --tail=20
+
+  # ---------- CD: publish images (only if tests AND the cluster deploy passed) ----------
+  build-and-push:
+    needs: [test, k8s-smoke-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [greeting-service, portal-service]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lower-case the owner (GHCR requires lower-case image names)
+        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          tags: |
+            ghcr.io/${{ env.OWNER }}/${{ matrix.service }}:latest
+            ghcr.io/${{ env.OWNER }}/${{ matrix.service }}:${{ github.sha }}
+
+  # ---------- OPTIONAL: deploy greeting-service to Render via deploy hook ----------
+  # deploy:
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"

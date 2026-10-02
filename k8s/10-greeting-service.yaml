@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: greeting-service
+  namespace: workshop
+  labels:
+    app: greeting-service
+spec:
+  replicas: 2                      # two identical pods; Kubernetes keeps it that way (self-healing)
+  selector:
+    matchLabels:
+      app: greeting-service
+  template:
+    metadata:
+      labels:
+        app: greeting-service
+    spec:
+      containers:
+        - name: greeting-service
+          image: greeting-service:local      # built locally and loaded into kind (see README)
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: APP_VERSION
+              value: "v1"
+          readinessProbe:          # only send traffic once the pod answers
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:           # restart the container if it stops answering
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service                      # stable name + load balancing across the pods
+metadata:
+  name: greeting-service
+  namespace: workshop
+  labels:
+    app: greeting-service
+spec:
+  selector:
+    app: greeting-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

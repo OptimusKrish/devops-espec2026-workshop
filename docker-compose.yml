@@ -1,0 +1,26 @@
+# Run everything locally:  docker compose up --build
+services:
+  greeting-service:
+    build: ./services/greeting-service
+    ports: ["3000:3000"]
+  portal-service:
+    build: ./services/portal-service
+    ports: ["3001:3000"]
+    environment:
+      GREETING_URL: http://greeting-service:3000   # compose DNS = service name
+    depends_on: [greeting-service]
+  prometheus:
+    image: prom/prometheus:latest
+    ports: ["9090:9090"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  grafana:
+    image: grafana/grafana:latest
+    ports: ["3002:3000"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"        # demo only: no login screen
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]

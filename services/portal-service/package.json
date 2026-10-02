@@ -1,0 +1,9 @@
+{
+  "name": "portal-service",
+  "version": "1.0.0",
+  "description": "Consumer microservice that calls greeting-service",
+  "main": "index.js",
+  "scripts": { "start": "node index.js", "test": "jest" },
+  "dependencies": { "express": "^4.19.2", "prom-client": "^15.1.3" },
+  "devDependencies": { "jest": "^29.7.0", "supertest": "^7.0.0" }
+}

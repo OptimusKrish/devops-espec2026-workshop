@@ -1,0 +1,19 @@
+# Apply AFTER installing kube-prometheus-stack (it provides the ServiceMonitor CRD).
+# Tells Prometheus: "scrape /metrics on every Service labelled app=greeting-service|portal-service in namespace workshop".
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: workshop-services
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames: [workshop]
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [greeting-service, portal-service]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
