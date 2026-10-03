@@ -1,0 +1,32 @@
+# Prometheus alerting rules. Loaded by prometheus.yml via `rule_files`.
+groups:
+  - name: workshop
+    rules:
+      # Fires when a service stops answering Prometheus (container stopped, pod deleted, app crashed)
+      - alert: ServiceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "Prometheus has not been able to scrape {{ $labels.instance }} for 30s."
+
+      # Fires when the app starts returning 5xx (e.g. greeting-service stopped, portal begins 502s)
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[1m]) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} is returning 5xx errors"
+          description: "More than 3 errors/min on {{ $labels.service }}."
+
+      # Fires when traffic basically stops (nice for "did I break the load script?")
+      - alert: NoTraffic
+        expr: rate(http_requests_total[1m]) == 0
+        for: 2m
+        labels:
+          severity: info
+        annotations:
+          summary: "{{ $labels.service }} has no traffic"

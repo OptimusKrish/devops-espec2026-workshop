@@ -1,0 +1,19 @@
+# Alertmanager config for the workshop demo.
+# Deliberately sends NO external notifications (no Slack/email/pager needed,
+# works fully offline). Fired alerts are visible at http://localhost:9093
+# and on the Prometheus "Alerts" page.
+global:
+  resolve_timeout: 1m
+
+route:
+  receiver: "workshop-demo"
+  group_by: ["alertname", "service"]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 5m
+
+receivers:
+  - name: "workshop-demo"
+    # No notification config on purpose: alerts are viewed in the UIs,
+    # not pushed anywhere. Add a webhook_configs / slack_configs entry
+    # here to wire real notifications.

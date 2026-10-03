@@ -5,3 +5,10 @@ scrape_configs:
     static_configs: [{ targets: ["greeting-service:3000"] }]
   - job_name: portal-service
     static_configs: [{ targets: ["portal-service:3000"] }]
+
+# Fire alerts that match rules in alerts.yml, and hand them to Alertmanager.
+rule_files:
+  - /etc/prometheus/alerts.yml
+alerting:
+  alertmanagers:
+    - static_configs: [{ targets: ["alertmanager:9093"] }]

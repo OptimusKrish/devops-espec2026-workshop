@@ -1,0 +1,30 @@
+# Kubernetes version of monitoring/alerts.yml.
+# Requires kube-prometheus-stack (provides the PrometheusRule CRD and Alertmanager).
+# Apply AFTER the helm install in README section 4:
+#   kubectl apply -f monitoring/prometheusrule.yaml
+# Then watch alerts fire at the Alertmanager UI (port-forward svc/monitoring-kube-prometheus-alertmanager -n monitoring 9093:9093).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: workshop-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring        # must match the helm release name so Prometheus picks it up
+spec:
+  groups:
+    - name: workshop
+      rules:
+        - alert: ServiceDown
+          expr: up == 0
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.job }} is down"
+        - alert: HighErrorRate
+          expr: rate(http_requests_total{status=~"5.."}[1m]) > 0.05
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} is returning 5xx errors"

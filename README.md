@@ -18,6 +18,9 @@ client ──► portal-service (:3001) ──HTTP──► greeting-service (:3
 | `.github/workflows/ci-cd.yml` | Test → deploy-to-kind smoke test → push images to GHCR |
 | `.devcontainer/` | GitHub Codespaces setup: Docker, kubectl, helm, kind, Node preinstalled |
 | `scripts/load.sh` | Traffic generator for the Grafana demo |
+| `AGENDA.md` | Full-day session plan with timings |
+| `exercises/` | Hands-on tasks per block (Docker, monitoring, K8s, CI/CD) |
+| `monitoring/alerts.yml` + `alertmanager.yml` | Alerting rules + Alertmanager config for the compose demo |
 
 ## 0. Where to run it (pick ONE for the workshop)
 - **Recommended: GitHub Codespaces.** Open the repo → Code → Codespaces → Create. Everything is preinstalled, so student laptop specs don't matter. Check the current free monthly allowance shortly before the session.
@@ -44,6 +47,7 @@ Images and registries: `docker tag`, `docker push ghcr.io/<owner>/greeting-servi
 - Prometheus: http://localhost:9090 → Status → Targets (both UP). Try `rate(http_requests_total[1m])`.
 - Grafana: http://localhost:3002 → Dashboards → *Workshop Microservices Overview* (no login; demo only).
 - Show a failure: `docker compose stop greeting-service` → portal returns 502, "Services UP" drops, 5xx panel rises. Then `docker compose start greeting-service`.
+- **Alerting:** with the stack running, `docker compose stop greeting-service`, wait ~1 min → `ServiceDown` fires at Prometheus → Alerts (:9090/alerts) and Alertmanager (:9093). Start it again and the alert resolves.
 
 ## 3. Kubernetes with kind (Content 3 + 4)
 ```bash
@@ -94,6 +98,7 @@ helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring
   --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
 kubectl -n monitoring get pods                        # wait until Running
 kubectl apply -f monitoring/servicemonitor.yaml       # "scrape our services"
+kubectl apply -f monitoring/prometheusrule.yaml       # alert rules for the cluster demo
 
 # load our dashboard into Grafana (its sidecar watches for this label)
 kubectl -n monitoring create configmap workshop-dashboard \
@@ -102,6 +107,7 @@ kubectl -n monitoring label configmap workshop-dashboard grafana_dashboard=1
 
 kubectl -n monitoring port-forward svc/monitoring-grafana 3002:80 &     # login: admin / prom-operator
 kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 &
+kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-alertmanager 9093:9093 &   # fired alerts land here
 ./scripts/load.sh        # needs the two service port-forwards from section 3
 ```
 Then delete pods and scale replicas while Grafana is on screen.
