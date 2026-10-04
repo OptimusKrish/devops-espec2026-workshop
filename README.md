@@ -18,6 +18,7 @@ client ──► portal-service (:3001) ──HTTP──► greeting-service (:3
 | `.github/workflows/ci-cd.yml` | Test → deploy-to-kind smoke test → push images to GHCR |
 | `.devcontainer/` | GitHub Codespaces setup: Docker, kubectl, helm, kind, Node preinstalled |
 | `scripts/load.sh` | Traffic generator for the Grafana demo |
+| `render.yaml` | Optional Render Blueprint — one-click deploy of both services |
 | `AGENDA.md` | Full-day session plan with timings |
 | `exercises/` | Hands-on tasks per block (Docker, monitoring, K8s, CI/CD) |
 | `monitoring/alerts.yml` + `alertmanager.yml` | Alerting rules + Alertmanager config for the compose demo |
@@ -26,7 +27,7 @@ client ──► portal-service (:3001) ──HTTP──► greeting-service (:3
 - **Recommended: GitHub Codespaces.** Open the repo → Code → Codespaces → Create. Everything is preinstalled, so student laptop specs don't matter. Check the current free monthly allowance shortly before the session.
 - **Local laptop:** Docker Desktop + `kubectl` + `kind` + `helm` + Node 20.
 
-> The service code and unit tests were run and pass. The Docker, Kubernetes, Helm and Actions parts were NOT run end to end when this kit was prepared (no Docker in the build environment). Do a full dry run in a fresh Codespace at least a day before.
+> Confirmed working end to end locally and on GitHub Codespaces (free tier). The Render.com section below has not yet been dry-run — do that at least a day before the workshop, same as everything else here.
 
 ## 1. Docker (Content 2)
 ```bash
@@ -116,7 +117,29 @@ Then delete pods and scale replicas while Grafana is on screen.
 1. Push this folder to your own GitHub repo. Settings → Actions → General → Workflow permissions → *Read and write*.
 2. Every push runs: `test` (both services in parallel) → `k8s-smoke-test` (throw-away kind cluster, deploys and calls the API) → `build-and-push` (images to `ghcr.io/<owner>/…`, only on `main` and only if the earlier jobs passed).
 3. **Push–break–fix:** edit a test in `services/greeting-service/index.test.js`, push, show the red run, fix, push, show green. Then open the repo's **Packages** tab.
-4. Deploy free: **Render** → New Web Service → connect the repo → set *Root Directory* to `services/greeting-service` → it detects the Dockerfile. Or use the commented `deploy` job with a deploy-hook secret. Free instances sleep when idle, so the first request is slow.
+4. (Optional, commented out) the `deploy` job in `ci-cd.yml` can also trigger a Render deploy hook automatically from Actions — see section 6.
+
+## 6. Auto-Deploy on Render.com
+
+Both services already have a working `Dockerfile` (`services/greeting-service/Dockerfile`, `services/portal-service/Dockerfile`) — Render builds straight from these, no extra file needed. This section is the live "push code, watch it deploy itself" demo.
+
+### Deploy both services (no YAML, easiest to narrate live)
+1. [render.com](https://render.com) → sign up free → **New +** → **Web Service** → connect your GitHub repo.
+2. First service: name it `greeting-service`, set **Root Directory** to `services/greeting-service`. Render detects the `Dockerfile` automatically — leave build/start commands blank. **Health Check Path**: `/health`. Plan: **Free**. Create.
+3. Wait for the first build (a few minutes), then open the assigned URL (e.g. `https://greeting-service.onrender.com`) and confirm `/greet/EGSPEC` responds.
+4. Second service: repeat with **Root Directory** `services/portal-service`, name `portal-service`, **Health Check Path** `/health`. Before deploying, add an environment variable: `GREETING_URL` = the greeting-service URL from step 3. Create.
+5. Confirm `https://portal-service.onrender.com/welcome/EGSPEC` returns a response that includes `greetingPod` — proof it really called the other live service over the internet.
+
+### One-click alternative
+`render.yaml` at the repo root is a Render **Blueprint** that defines both services at once: **New +** → **Blueprint** → connect the repo → Apply. Update `portal-service`'s `GREETING_URL` env var in the dashboard afterward if the guessed URL in the file doesn't match what Render assigned.
+
+### The actual "auto-deploy" proof (do this live)
+1. With both services already deployed, make a trivial visible change — e.g. edit the message string in `services/greeting-service/index.js`.
+2. `git push`.
+3. Switch to the Render dashboard **before** refreshing the browser tab — show students the new deploy kick off **on its own**, with no one clicking "Deploy."
+4. Once it finishes, reload the live URL and show the changed text. This is the whole pitch: *push is the only human action; build, containerize, and deploy are automatic.*
+
+Free-tier notes: free services sleep after 15 minutes of inactivity, so the first request after idle is slow (~30–50s) — mention this to students so it doesn't look broken. Verify current Render free-tier limits shortly before the workshop, as they can change.
 
 ## Troubleshooting
 | Symptom | Fix |

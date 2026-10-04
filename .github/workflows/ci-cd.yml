@@ -87,8 +87,8 @@ jobs:
             ghcr.io/${{ env.OWNER }}/${{ matrix.service }}:${{ github.sha }}
 
   # ---------- OPTIONAL: deploy greeting-service to Render via deploy hook ----------
-  # deploy:
-  #   needs: build-and-push
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
