@@ -91,4 +91,13 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+      - name: Trigger Render deploy (if configured)
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [[ -z "$RENDER_DEPLOY_HOOK" ]]; then
+            echo "::notice::Skipping Render deploy because the RENDER_DEPLOY_HOOK secret is not configured."
+            exit 0
+          fi
+
+          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK"

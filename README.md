@@ -117,7 +117,7 @@ Then delete pods and scale replicas while Grafana is on screen.
 1. Push this folder to your own GitHub repo. Settings → Actions → General → Workflow permissions → *Read and write*.
 2. Every push runs: `test` (both services in parallel) → `k8s-smoke-test` (throw-away kind cluster, deploys and calls the API) → `build-and-push` (images to `ghcr.io/<owner>/…`, only on `main` and only if the earlier jobs passed).
 3. **Push–break–fix:** edit a test in `services/greeting-service/index.test.js`, push, show the red run, fix, push, show green. Then open the repo's **Packages** tab.
-4. (Optional, commented out) the `deploy` job in `ci-cd.yml` can also trigger a Render deploy hook automatically from Actions — see section 6.
+4. (Optional) the `deploy` job in `ci-cd.yml` triggers a Render deploy hook when the `RENDER_DEPLOY_HOOK` GitHub Actions secret is configured; otherwise, it is skipped.
 
 ## 6. Auto-Deploy on Render.com
 
@@ -131,13 +131,15 @@ Both services already have a working `Dockerfile` (`services/greeting-service/Do
 5. Confirm `https://portal-service.onrender.com/welcome/EGSPEC` returns a response that includes `greetingPod` — proof it really called the other live service over the internet.
 
 ### One-click alternative
-`render.yaml` at the repo root is a Render **Blueprint** that defines both services at once: **New +** → **Blueprint** → connect the repo → Apply. Update `portal-service`'s `GREETING_URL` env var in the dashboard afterward if the guessed URL in the file doesn't match what Render assigned.
+`render.yaml` at the repo root is a Render **Blueprint** that defines both services at once: **New +** → **Blueprint** → connect the repo → Apply. After `greeting-service` deploys, set `portal-service`'s `GREETING_URL` env var in the dashboard to its assigned public URL.
 
 ### The actual "auto-deploy" proof (do this live)
 1. With both services already deployed, make a trivial visible change — e.g. edit the message string in `services/greeting-service/index.js`.
 2. `git push`.
 3. Switch to the Render dashboard **before** refreshing the browser tab — show students the new deploy kick off **on its own**, with no one clicking "Deploy."
 4. Once it finishes, reload the live URL and show the changed text. This is the whole pitch: *push is the only human action; build, containerize, and deploy are automatic.*
+
+To trigger a Render deploy from GitHub Actions instead, create a deploy hook for `greeting-service` in Render, then add its URL as the repository Actions secret `RENDER_DEPLOY_HOOK` under **Settings → Secrets and variables → Actions**. The workflow skips this optional step when the secret is not configured.
 
 Free-tier notes: free services sleep after 15 minutes of inactivity, so the first request after idle is slow (~30–50s) — mention this to students so it doesn't look broken. Verify current Render free-tier limits shortly before the workshop, as they can change.
 

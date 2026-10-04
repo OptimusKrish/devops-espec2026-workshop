@@ -8,11 +8,8 @@
 # is easier to narrate live in front of a room — use whichever you're
 # more comfortable demoing.
 #
-# NOTE: after greeting-service's first deploy, copy its real public URL
-# into portal-service's GREETING_URL env var below (or in the Render
-# dashboard) if it differs from the guessed one — Render usually
-# assigns https://<service-name>.onrender.com when that name is free,
-# but falls back to a suffixed name if it's already taken.
+# NOTE: after greeting-service's first deploy, set portal-service's
+# GREETING_URL in the Render dashboard to its actual public URL.
 
 services:
   - type: web
@@ -35,5 +32,4 @@ services:
     healthCheckPath: /health
     envVars:
       - key: GREETING_URL
-        value: https://greeting-service.onrender.com
-        sync: false # confirm/update this in the Render dashboard after greeting-service's first deploy
+        sync: false # set this in the Render dashboard after greeting-service's first deploy
