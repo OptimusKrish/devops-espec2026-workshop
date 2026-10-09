@@ -17,6 +17,6 @@ describe('portal-service', () => {
   });
   it('GET /health returns UP', async () => {
     const res = await request(app).get('/health');
-    expect(res.body.status).toBe('UP');
+    expect(res.body.status).toBe('Portal Service is UP');
   });
 });

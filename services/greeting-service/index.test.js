@@ -9,7 +9,7 @@ describe('greeting-service', () => {
   });
   it('GET /health returns UP', async () => {
     const res = await request(app).get('/health');
-    expect(res.body.status).toBe('UP');
+    expect(res.body.status).toBe('Greetings service is UP');
   });
   it('GET /greet/:name greets the caller', async () => {
     const res = await request(app).get('/greet/EGSPEC');
