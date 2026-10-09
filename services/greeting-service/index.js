@@ -39,7 +39,7 @@ function observe(req, res, next) {
 const app = express();
 app.use(observe);
 
-app.get('/health', (req, res) => res.status(200).json({ status: 'UP' }));
+app.get('/health', (req, res) => res.status(200).json({ status: 'Greetings service is UP' }));
 
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);
